@@ -1,8 +1,32 @@
 import argparse
 import csv
 import xml.etree.ElementTree as ET
+import re
 
 from SvgTemplate import SvgTemplate, TextFilter
+
+class LabelmakerInputException(Exception):
+  pass
+
+# from http://www.w3.org/TR/SVG/coords.html#Units
+UNITS_TO_PX = {
+  "pt": 1.25,
+  "pc": 15,
+  "mm": 3.543307,
+  "cm": 35.43307,
+  "in" : 90
+  }
+def units_to_pixels(units_num):
+  match = re.search(r"(\d*.?\d+)\s*(\w*)", units_num)
+  if not match:
+    raise LabelmakerInputException("Caanot parse length '%s'" % units_num)
+
+  num = float(match.group(1))
+  units = match.group(2)
+  if units:
+    assert units in UNITS_TO_PX
+    num *= UNITS_TO_PX[units]
+  return num
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description="Generate label sheet from SVG template")
@@ -20,11 +44,26 @@ if __name__ == '__main__':
   template = SvgTemplate(template_etree, [TextFilter()])
   output = template.get_base()
   
+  num_rows = int(template.get_config('nrows'))
+  num_cols = int(template.get_config('ncols'))
+  curr_row = 0
+  curr_col = 0
+  
   for row in data_reader:
     # TODO: make namespace parsing & handling general
+    incx = units_to_pixels(template.get_config("incx")) * curr_col
+    incy = units_to_pixels(template.get_config("incy")) * curr_row
     new_group = ET.SubElement(output.getroot(), tag="{http://www.w3.org/2000/svg}g",
-                              attrib={"transform": "translate(10,10)"})
+                              attrib={"transform": "translate(%f ,%f)" % (incx, incy)})
+    
     for elt in template.generate(row):
       new_group.append(elt)
     
+    curr_row += 1
+    if curr_row == num_rows:
+      curr_row = 0
+      curr_col += 1
+    if curr_col == num_cols:
+      assert False, "TODO: handle col overflow, newpage support"
+      
   output.write(args.output)

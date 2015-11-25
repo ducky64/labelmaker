@@ -24,7 +24,6 @@ class TextFilter(TemplateFilter):
         key = match.group(1)
         # TODO: more robust error handling
         assert key in data_dict
-        print(key + data_dict[key])
         return data_dict[key]
       elt.text = re.sub(r"%\((.+)\)", parsed, elt.text)
 
@@ -63,6 +62,12 @@ class SvgTemplate:
         self.template_elts.append(child_elt)
     for template_elt in self.template_elts:
       self.base_etree.getroot().remove(template_elt)
+  
+  """Returns the parsed configuration (##var = val) as a string"""
+  def get_config(self, config_key):
+    # TODO: more user friendly error handling
+    assert config_key in self.config
+    return self.config[config_key]
   
   """Returns the non-template portion of the input SVG etree."""
   def get_base(self):
