@@ -46,6 +46,13 @@ and rectangle (image sizing) with an image
 The rectangle is replaced with the image, and the text element is removed (this
 preserves any transforms within the group)."""
 class ImageFilter(TemplateFilter):
+  """Perform image substitution given the text and rectangle element
+  Can return either a list of SVG elements to insert into the group, or None to
+  leave things as-is (for example, if the text command isn't valid.
+  """
+  def replace(self, text, rect_elt):
+    raise NotImplementedError()
+  
   def apply(self, elt, data_dict):
     # Check if is a group, and if so, if only two elements are a text and rect
     if strip_tag(elt.tag) != 'g' or len(elt) != 2:
@@ -57,14 +64,21 @@ class ImageFilter(TemplateFilter):
       rect_elt = elt[1]
       text_elt = elt[0]
     else:
-      return    
+      return
       
-    # TODO image substitution
-    print(get_text_contents(text_elt))
+    new_elts = self.replace(get_text_contents(text_elt), rect_elt)
+    if new_elts is not None:
+      elt.remove(rect_elt)
+      elt.remove(text_elt)
+      for new_elt in new_elts:
+        elt.insert(len(elt), new_elt)
 
 class BarcodeFilter(ImageFilter):
-  pass
-
+  def replace(self, text, rect_elt):
+    # TODO image substitution
+    print(text)
+    return []
+    
 class SvgTemplate:
   # a whitelist of SVG XML tags to treat as the template part
   SVG_ELEMENTS = ["g"]
