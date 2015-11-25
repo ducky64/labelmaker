@@ -3,7 +3,7 @@ import csv
 import xml.etree.ElementTree as ET
 import re
 
-from SvgTemplate import SvgTemplate, TextFilter
+from SvgTemplate import SvgTemplate, TextFilter, BarcodeFilter
 
 class LabelmakerInputException(Exception):
   pass
@@ -41,7 +41,8 @@ if __name__ == '__main__':
   template_etree = ET.parse(args.template)
   data_reader = csv.DictReader(open(args.data))
 
-  template = SvgTemplate(template_etree, [TextFilter()])
+  template = SvgTemplate(template_etree, [TextFilter(),
+                                          BarcodeFilter()])
   output = template.get_base()
   
   num_rows = int(template.get_config('nrows'))

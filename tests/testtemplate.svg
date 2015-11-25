@@ -25,16 +25,16 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="2.8"
-     inkscape:cx="71.5196446"
-     inkscape:cy="945.222553"
+     inkscape:zoom="3.95979797"
+     inkscape:cx="90.2947124"
+     inkscape:cy="958.304186"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="true"
-     inkscape:window-width="742"
-     inkscape:window-height="403"
-     inkscape:window-x="4296"
-     inkscape:window-y="542"
+     inkscape:window-width="925"
+     inkscape:window-height="861"
+     inkscape:window-x="4663"
+     inkscape:window-y="346"
      inkscape:window-maximized="0"
      units="px"
      inkscape:snap-bbox="true"
@@ -124,5 +124,28 @@
        d="m 70.8661417,29.2322614 c 0,26.5748031 0,26.5748031 0,26.5748031"
        id="path4186"
        inkscape:connector-curvature="0" />
+    <g
+       id="g5683"
+       transform="translate(-1.83225616e-6,-35.4330664)">
+      <rect
+         y="86.810997"
+         x="70.8661423"
+         height="8.85826778"
+         width="88.5826797"
+         id="rect4193"
+         style="opacity:1;fill:#c0c0c0;fill-opacity:1;stroke:none;stroke-width:0.999212623;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" />
+      <text
+         sodipodi:linespacing="125%"
+         id="text4189"
+         y="92.809959"
+         x="70.4804"
+         style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:Sans;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         xml:space="preserve"><tspan
+           style="font-size:5px"
+           y="92.809959"
+           x="70.4804"
+           id="tspan4191"
+           sodipodi:role="line">#barcode %(num)</tspan></text>
+    </g>
   </g>
 </svg>
