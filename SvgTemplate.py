@@ -1,5 +1,10 @@
+import base64
 import copy
 import re
+import xml.etree.ElementTree as ET
+
+import Code128
+import StringIO
 
 """Removes the namespace from a XML tag"""
 def strip_tag(tag):
@@ -73,11 +78,33 @@ class ImageFilter(TemplateFilter):
       for new_elt in new_elts:
         elt.insert(len(elt), new_elt)
 
+def elt_attrs_to_dict(elt, attrs):
+  out_dict = {}
+  for attr in attrs:
+    val = elt.get(attr, None)
+    if val is not None:
+      out_dict[attr] = val
+  return out_dict
+
 class BarcodeFilter(ImageFilter):
   def replace(self, text, rect_elt):
-    # TODO image substitution
-    print(text)
-    return []
+    match = re.search(r"#(\S+)\s+(\S+)", text)
+    if not match:
+      return None
+    if match.group(1) != 'code128':
+      return
+    image_elt = ET.Element('image',
+                           elt_attrs_to_dict(rect_elt, 
+                                             ['x', 'y', 'height', 'width']))
+    image = Code128.code128_image(match.group(2))
+    image_output = StringIO.StringIO()
+    image.save(image_output, format='PNG')
+    image_base64 = base64.b64encode(image_output.getvalue())
+    data_string = "data:image/png;base64,%s" % image_base64 
+    image_output.close()
+    image_elt.set('{http://www.w3.org/1999/xlink}href', data_string)
+    
+    return [image_elt]
     
 class SvgTemplate:
   # a whitelist of SVG XML tags to treat as the template part

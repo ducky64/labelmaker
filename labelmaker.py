@@ -38,6 +38,7 @@ if __name__ == '__main__':
                       help="SVG generated labels output")
   args = parser.parse_args()
   
+  ET.register_namespace('', "http://www.w3.org/2000/svg")
   template_etree = ET.parse(args.template)
   data_reader = csv.DictReader(open(args.data))
 

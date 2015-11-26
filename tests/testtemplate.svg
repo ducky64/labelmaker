@@ -145,7 +145,7 @@
            y="92.809959"
            x="70.4804"
            id="tspan4191"
-           sodipodi:role="line">#barcode %(num)</tspan></text>
+           sodipodi:role="line">#code128 %(desc)</tspan></text>
     </g>
   </g>
 </svg>
