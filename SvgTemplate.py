@@ -6,6 +6,10 @@ import xml.etree.ElementTree as ET
 import Code128
 import StringIO
 
+"""Exception class for invalid template specifications"""
+class SvgTemplateException(Exception):
+  pass
+
 """Removes the namespace from a XML tag"""
 def strip_tag(tag):
   if "}" in tag:
@@ -88,21 +92,39 @@ def elt_attrs_to_dict(elt, attrs):
 
 class BarcodeFilter(ImageFilter):
   def replace(self, text, rect_elt):
-    match = re.search(r"#(\S+)\s+(\S+)", text)
+    match = re.search(r"#(\S+)\s+(?:@(\S+)\s+)*(\S+)", text)
     if not match:
       return None
-    if match.group(1) != 'code128':
+    groups = match.groups()
+    if groups[0] != 'code128':
       return
-    image_elt = ET.Element('image',
-                           elt_attrs_to_dict(rect_elt, 
-                                             ['x', 'y', 'height', 'width']))
-    image = Code128.code128_image(match.group(2))
+    attrs = elt_attrs_to_dict(rect_elt, ['x', 'y', 'height', 'width'])
+    
+    # TODO: generalized argument parsing framework
+    # parse optional arguments
+    for group in groups[1:-1]:
+      arg_match = re.search(r"(\S+)=(\S+)", group)
+      if not arg_match:
+        raise SvgTemplateException("Bad argument format '%s'" % group)
+      arg_key = arg_match.group(1)
+      arg_val = arg_match.group(2)
+      if arg_key == 'align':
+        attrs['preserveAspectRatio'] = arg_val
+      else:
+        raise SvgTemplateException("Unknown argument key '%s'" % arg_key)
+    
+    image = Code128.code128_image(groups[-1])
     image_output = StringIO.StringIO()
     image.save(image_output, format='PNG')
     image_base64 = base64.b64encode(image_output.getvalue())
-    data_string = "data:image/png;base64,%s" % image_base64 
     image_output.close()
-    image_elt.set('{http://www.w3.org/1999/xlink}href', data_string)
+    data_string = "data:image/png;base64,%s" % image_base64 
+    attrs['{http://www.w3.org/1999/xlink}href'] = data_string
+    
+    image_elt = ET.Element('image', attrs)
+    
+    # 
+    # image_elt.set(, data_string)
     
     return [image_elt]
     

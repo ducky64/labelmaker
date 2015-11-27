@@ -26,15 +26,15 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="3.95979797"
-     inkscape:cx="90.2947124"
+     inkscape:cx="115.426537"
      inkscape:cy="958.304186"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="true"
-     inkscape:window-width="925"
-     inkscape:window-height="861"
-     inkscape:window-x="4663"
-     inkscape:window-y="346"
+     inkscape:window-width="944"
+     inkscape:window-height="1162"
+     inkscape:window-x="4720"
+     inkscape:window-y="220"
      inkscape:window-maximized="0"
      units="px"
      inkscape:snap-bbox="true"
@@ -126,9 +126,9 @@
        inkscape:connector-curvature="0" />
     <g
        id="g5683"
-       transform="translate(-1.83225616e-6,-35.4330664)">
+       transform="translate(-1.83225613e-6,-48.7204657)">
       <rect
-         y="86.810997"
+         y="100.098396"
          x="70.8661423"
          height="8.85826778"
          width="88.5826797"
@@ -137,15 +137,20 @@
       <text
          sodipodi:linespacing="125%"
          id="text4189"
-         y="92.809959"
-         x="70.4804"
-         style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:Sans;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         y="103.21833"
+         x="70.866142"
+         style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:Sans;text-align:start;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
          xml:space="preserve"><tspan
-           style="font-size:5px"
-           y="92.809959"
-           x="70.4804"
+           style="font-size:3.75px;text-align:start;text-anchor:start"
+           y="103.21833"
+           x="70.866142"
            id="tspan4191"
-           sodipodi:role="line">#code128 %(desc)</tspan></text>
+           sodipodi:role="line">#code128</tspan><tspan
+           style="font-size:3.75px;text-align:start;text-anchor:start"
+           y="107.90583"
+           x="70.866142"
+           sodipodi:role="line"
+           id="tspan5751"> @align=xMinYMid %(desc)</tspan></text>
     </g>
   </g>
 </svg>
