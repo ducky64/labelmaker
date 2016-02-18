@@ -4,7 +4,10 @@ import re
 import xml.etree.ElementTree as ET
 
 import Code128
-import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 """Exception class for invalid template specifications"""
 class SvgTemplateException(Exception):
@@ -46,7 +49,7 @@ class TextFilter(TemplateFilter):
       def parsed(match):
         key = match.group(1)
         # TODO: more robust error handling
-        assert key in data_dict
+        assert key in data_dict, "missing key %s" % key
         return data_dict[key]
       elt.text = re.sub(r"%\((.+)\)", parsed, elt.text)
 

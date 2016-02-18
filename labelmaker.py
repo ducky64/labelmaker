@@ -55,7 +55,7 @@ if __name__ == '__main__':
     # TODO: make namespace parsing & handling general
     incx = units_to_pixels(template.get_config("incx")) * curr_col
     incy = units_to_pixels(template.get_config("incy")) * curr_row
-    new_group = ET.SubElement(output.getroot(), tag="{http://www.w3.org/2000/svg}g",
+    new_group = ET.SubElement(output.getroot(), "{http://www.w3.org/2000/svg}g",
                               attrib={"transform": "translate(%f ,%f)" % (incx, incy)})
     
     for elt in template.generate(row):
