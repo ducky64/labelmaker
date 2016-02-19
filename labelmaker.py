@@ -1,5 +1,6 @@
 import argparse
 import csv
+import codecs
 import xml.etree.ElementTree as ET
 import re
 
@@ -40,7 +41,7 @@ if __name__ == '__main__':
   
   ET.register_namespace('', "http://www.w3.org/2000/svg")
   template_etree = ET.parse(args.template)
-  data_reader = csv.DictReader(open(args.data))
+  data_reader = csv.DictReader(codecs.open(args.data, encoding='utf-8'))
 
   template = SvgTemplate(template_etree, [TextFilter(),
                                           BarcodeFilter()])
