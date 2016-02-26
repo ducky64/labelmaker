@@ -4,10 +4,8 @@ import re
 import xml.etree.ElementTree as ET
 
 import Code128
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+
+from io import BytesIO
 
 """Exception class for invalid template specifications"""
 class SvgTemplateException(Exception):
@@ -45,7 +43,7 @@ class TemplateFilter:
 style string interpolation"""
 class TextFilter(TemplateFilter):
   def apply(self, elt, data_dict):
-    if strip_tag(elt.tag) in ['text', 'tspan'] and elt.text:
+    if strip_tag(elt.tag) in ['text', 'tspan', 'flowRoot', 'flowPara', 'flowSpan'] and elt.text:
       def parsed(match):
         key = match.group(1)
         # TODO: more robust error handling
@@ -95,7 +93,7 @@ def elt_attrs_to_dict(elt, attrs):
 
 class BarcodeFilter(ImageFilter):
   def replace(self, text, rect_elt):
-    match = re.search(r"#(\S+)\s+(?:@(\S+)\s+)*(\S+)", text)
+    match = re.search(r"#(\S+)\s+(@\S+\s+)*(\S+)", text)
     if not match:
       return None
     groups = match.groups()
@@ -103,25 +101,29 @@ class BarcodeFilter(ImageFilter):
       return
     attrs = elt_attrs_to_dict(rect_elt, ['x', 'y', 'height', 'width'])
     
+    thickness = 3
     # TODO: generalized argument parsing framework
     # parse optional arguments
     for group in groups[1:-1]:
-      arg_match = re.search(r"(\S+)=(\S+)", group)
+      print(groups)
+      arg_match = re.search(r"@(\S+)=(\S+)", group)
       if not arg_match:
         raise SvgTemplateException("Bad argument format '%s'" % group)
       arg_key = arg_match.group(1)
       arg_val = arg_match.group(2)
       if arg_key == 'align':
         attrs['preserveAspectRatio'] = arg_val
+      elif arg_key == 'thickness':
+        thickness = int(arg_val)
       else:
         raise SvgTemplateException("Unknown argument key '%s'" % arg_key)
     
-    image = Code128.code128_image(groups[-1])
-    image_output = StringIO.StringIO()
+    image = Code128.code128_image(groups[-1], thickness=thickness)
+    image_output = BytesIO()
     image.save(image_output, format='PNG')
     image_base64 = base64.b64encode(image_output.getvalue())
     image_output.close()
-    data_string = "data:image/png;base64,%s" % image_base64 
+    data_string = "data:image/png;base64," + image_base64.decode("utf-8") 
     attrs['{http://www.w3.org/1999/xlink}href'] = data_string
     
     image_elt = ET.Element('image', attrs)
