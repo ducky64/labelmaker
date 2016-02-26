@@ -91,34 +91,74 @@ def elt_attrs_to_dict(elt, attrs):
       out_dict[attr] = val
   return out_dict
 
+class CommandSyntaxError(Exception):
+  pass
+
+"""
+Command parser
+"""
+class Command:
+  def __init__(self, cmd_str):
+    self.cmd_str = cmd_str
+    cmd_split = [elt for elt in cmd_str.split(' ') if elt]
+    cmd = cmd_split[0]
+    if not cmd.startswith('#'):
+      raise CommandSyntaxError("Command '%s' first element '%s' didn't start with '#'" % (cmd_str, cmd))
+    self.cmd = cmd[1:]  # discard the '#'
+    cmd_args = cmd_split[1:]
+    self.kw_args = {}
+    self.pos_args = []
+    for cmd_arg in cmd_args:
+      if '=' in cmd_arg:
+        arg_split = cmd_arg.split('=')
+        if len(arg_split) != 2:
+          raise CommandSyntaxError("Command '%s' keyword arg '%s' must have exactly one '='" % (cmd_str, cmd_arg))
+        if arg_split[0] in self.kw_args:
+          raise CommandSyntaxError("Command '%s' redefined keyword arg '%s'" % (cmd_str, arg_split[0]))
+        self.kw_args[arg_split[0]] = arg_split[1]
+      else:
+        self.pos_args.append(cmd_arg)
+        
+    self.kw_args_accessed = set()
+    self.pos_args_accessed = set()
+         
+  def get_pos_arg(self, index, desc):
+    if index >= len(self.pos_args):
+      raise CommandSyntaxError("Command '%s' missing arg %i (%s)" % (self.cmd_str, index, desc))
+    self.pos_args_accessed.add(index)
+    return self.pos_args[index]
+
+  def get_kw_arg(self, kw, desc, default=CommandSyntaxError):
+    if kw not in self.kw_args:
+      if default == CommandSyntaxError:
+        raise CommandSyntaxError("Command '%s' missing required keyword arg %s (%s)" % (self.cmd_str, kw, desc))
+      else:
+        return default
+    self.kw_args_accessed.add(kw)
+    return self.kw_args[kw]
+
+  def finalize(self):
+    pos_args_unaccessed = set(range(len(self.pos_args))) - self.pos_args_accessed
+    if pos_args_unaccessed:
+      raise CommandSyntaxError("Command '%s' has unused positional arguments %s" % (self.cmd_str, pos_args_unaccessed))
+
+    kw_args_unaccessed = set(self.kw_args.keys()) - self.kw_args_accessed
+    if kw_args_unaccessed:
+      raise CommandSyntaxError("Command '%s' has unused keyword arguments %s" % (self.cmd_str, kw_args_unaccessed))
+
 class BarcodeFilter(ImageFilter):
   def replace(self, text, rect_elt):
-    match = re.search(r"#(\S+)\s+(@\S+\s+)*(\S+)", text)
-    if not match:
-      return None
-    groups = match.groups()
-    if groups[0] != 'code128':
+    if not text.startswith('#code128'):
       return
+    cmd = Command(text)
+    
     attrs = elt_attrs_to_dict(rect_elt, ['x', 'y', 'height', 'width'])
-    
-    thickness = 3
-    # TODO: generalized argument parsing framework
-    # parse optional arguments
-    for group in groups[1:-1]:
-      print(groups)
-      arg_match = re.search(r"@(\S+)=(\S+)", group)
-      if not arg_match:
-        raise SvgTemplateException("Bad argument format '%s'" % group)
-      arg_key = arg_match.group(1)
-      arg_val = arg_match.group(2)
-      if arg_key == 'align':
-        attrs['preserveAspectRatio'] = arg_val
-      elif arg_key == 'thickness':
-        thickness = int(arg_val)
-      else:
-        raise SvgTemplateException("Unknown argument key '%s'" % arg_key)
-    
-    image = Code128.code128_image(groups[-1], thickness=thickness)
+    attrs['preserveAspectRatio'] = cmd.get_kw_arg('align', 'rescale alignment', 'xMidYMid')
+    thickness = int(cmd.get_kw_arg('thickness', 'barcode thickness', 3))
+    val = cmd.get_pos_arg(0, 'barcode value')
+    cmd.finalize()
+        
+    image = Code128.code128_image(val, thickness=thickness)
     image_output = BytesIO()
     image.save(image_output, format='PNG')
     image_base64 = base64.b64encode(image_output.getvalue())
@@ -128,10 +168,10 @@ class BarcodeFilter(ImageFilter):
     
     image_elt = ET.Element('image', attrs)
     
-    # 
-    # image_elt.set(, data_string)
-    
     return [image_elt]
+    
+class TemplateError(Exception):
+  pass
     
 class SvgTemplate:
   # a whitelist of SVG XML tags to treat as the template part
@@ -147,22 +187,35 @@ class SvgTemplate:
     self.base_etree = copy.deepcopy(template_etree)
   
     # Parse template-inline configurations
-    self.config = {}
-    def parsed(match):
-      key = match.group(1)
-      val = match.group(2)
-      assert key not in self.config, "duplicate key %s" % key
-      self.config[key] = val
-      print("found config: %s = '%s'" % (key, val))
-      return ""
+    self.config = None
     
+    """
+    Recursively goes through elements looking for a text element with a #config
+    command. Returns true if it finds one (so it can be removed by the caller),
+    otherwise returns False.
+    """
     def config_parse(elt):
-      if strip_tag(elt.tag) in ["text", "tspan"] and elt.text:
-        elt.text = re.sub(r"##(\S+)\s*=\s*(\S+)", parsed, elt.text)
-      for child in elt:
-        config_parse(child)
+      if strip_tag(elt.tag) in ["text", "tspan"]:
+        text = get_text_contents(elt)
+        if text.startswith('#config'):
+          if self.config is not None:
+            raise TemplateError("Duplicate config commands found: '%s', '%s'" % (self.config.cmd_str, text))
+          self.config = Command(text)
+          return True
+        return False
+      else:
+        remove_list = []
+        for child in elt:
+          if config_parse(child):
+            remove_list.append(child)
+        for remove_elt in remove_list:
+          elt.remove(remove_elt)
+        return False
       
     config_parse(self.base_etree.getroot())
+    
+    if self.config is None:
+      raise TemplateError("No config command found")
 
     # Split etree between base and template
     self.template_elts = []
@@ -175,8 +228,8 @@ class SvgTemplate:
   """Returns the parsed configuration (##var = val) as a string"""
   def get_config(self, config_key):
     # TODO: more user friendly error handling
-    assert config_key in self.config
-    return self.config[config_key]
+    # TODO: add description
+    return self.config.get_kw_arg(config_key, "")
   
   """Returns the non-template portion of the input SVG etree."""
   def get_base(self):
