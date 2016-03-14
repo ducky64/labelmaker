@@ -1,4 +1,5 @@
 import base64
+from collections import OrderedDict
 import copy
 import re
 import xml.etree.ElementTree as ET
@@ -95,7 +96,9 @@ class CommandSyntaxError(Exception):
   pass
 
 """
-Command parser
+Command parser, parses a standardized command string (#cmd (kwarg=kwval) vals),
+verifying that the command matches and providing the positional and keyword
+arguments. Also ensures that all the positional and keyword arguments are used.
 """
 class Command:
   def __init__(self, cmd_str):
@@ -128,6 +131,9 @@ class Command:
     self.pos_args_accessed.add(index)
     return self.pos_args[index]
 
+  def get_kw_keys(self):
+    return self.kw_args.keys()
+
   def get_kw_arg(self, kw, desc, default=CommandSyntaxError):
     if kw not in self.kw_args:
       if default == CommandSyntaxError:
@@ -146,6 +152,10 @@ class Command:
     if kw_args_unaccessed:
       raise CommandSyntaxError("Command '%s' has unused keyword arguments %s" % (self.cmd_str, kw_args_unaccessed))
 
+"""
+Takes in a command and a rect elt in a group and generates a code128 barcode
+image (sized to the rect) which is then embedded into the SVG.
+"""
 class BarcodeFilter(ImageFilter):
   def replace(self, text, rect_elt):
     if not text.startswith('#code128'):
@@ -169,6 +179,34 @@ class BarcodeFilter(ImageFilter):
     image_elt = ET.Element('image', attrs)
     
     return [image_elt]
+    
+"""
+Takes in a command and a rect (may be less restricted in the future) in a group
+and changes the style attribute based. Each keyword argument in the command
+becomes a style key/value, overwriting existing ones. Order of style elements
+in the SVG is preserved. 
+"""
+class StyleFilter(ImageFilter):
+  def replace(self, text, rect_elt):
+    if not text.startswith('#style'):
+      return
+    cmd = Command(text)
+    
+    style_dict = OrderedDict()
+    for style_kv in rect_elt.get('style', '').split(';'):
+      kv = style_kv.split(':')
+      assert len(kv) == 2
+      if kv[0] in style_dict:
+        raise SvgTemplateException("Duplicate style key '%s' in template" % kv[0])
+      style_dict[kv[0]] = kv[1]
+    
+    for kwkey in cmd.get_kw_keys():
+      style_dict[kwkey] = cmd.get_kw_arg(kwkey, "(style key-argument pair)")
+    
+    style_elts = ['%s:%s' % (k, v) for k, v in style_dict.items()]
+    rect_elt.set('style', ';'.join(style_elts))
+    
+    return [rect_elt]
     
 class TemplateError(Exception):
   pass

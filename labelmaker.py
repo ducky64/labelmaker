@@ -4,7 +4,7 @@ import codecs
 import xml.etree.ElementTree as ET
 import re
 
-from SvgTemplate import SvgTemplate, TextFilter, BarcodeFilter
+from SvgTemplate import SvgTemplate, TextFilter, BarcodeFilter, StyleFilter
 
 class LabelmakerInputException(Exception):
   pass
@@ -44,7 +44,8 @@ if __name__ == '__main__':
   data_reader = csv.DictReader(codecs.open(args.data, encoding='utf-8'))
 
   template = SvgTemplate(template_etree, [TextFilter(),
-                                          BarcodeFilter()])
+                                          BarcodeFilter(),
+                                          StyleFilter()])
   output = template.get_base()
   
   num_rows = int(template.get_config('nrows'))
