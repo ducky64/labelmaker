@@ -164,11 +164,18 @@ class BarcodeFilter(ImageFilter):
     
     attrs = elt_attrs_to_dict(rect_elt, ['x', 'y', 'height', 'width'])
     attrs['preserveAspectRatio'] = cmd.get_kw_arg('align', 'rescale alignment', 'xMidYMid')
+    quiet = cmd.get_kw_arg('quiet', 'add quiet zone')
+    if quiet in ['true', 'True']:
+      quiet = True
+    elif quiet in ['False', 'false']:
+      quiet = False
+    else:
+      raise CommandSyntaxError("quiet='%s' not a bool" % quiet)
     thickness = int(cmd.get_kw_arg('thickness', 'barcode thickness', 3))
     val = cmd.get_pos_arg(0, 'barcode value')
     cmd.finalize()
-        
-    image = Code128.code128_image(val, thickness=thickness)
+    
+    image = Code128.code128_image(val, thickness=thickness, quiet_zone=quiet)
     image_output = BytesIO()
     image.save(image_output, format='PNG')
     image_base64 = base64.b64encode(image_output.getvalue())
