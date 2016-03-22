@@ -50,7 +50,7 @@ class TextFilter(TemplateFilter):
         # TODO: more robust error handling
         assert key in data_dict, "missing key %s" % key
         return data_dict[key]
-      elt.text = re.sub(r"%\((.+)\)", parsed, elt.text)
+      elt.text = re.sub(r"%\(([^(^)]+)\)", parsed, elt.text)
 
 """Replaces a group which consists of only a textbox (image replacement command)
 and rectangle (image sizing) with an image
