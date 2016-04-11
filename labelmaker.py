@@ -37,11 +37,25 @@ if __name__ == '__main__':
                       help="CSV data")
   parser.add_argument('output', type=str,
                       help="SVG generated labels output")
+  parser.add_argument('--only', type=str, default=None,
+                      help="only process rows which have this key nonempty")
   args = parser.parse_args()
   
   ET.register_namespace('', "http://www.w3.org/2000/svg")
   template_etree = ET.parse(args.template)
   data_reader = csv.DictReader(codecs.open(args.data, encoding='utf-8'))
+  
+  if args.only:
+    if '=' in args.only:
+      split = args.only.split('=')
+      assert len(split) == 2
+      only_parse_key = split[0]
+      only_parse_val = split[1]
+    else:
+      only_parse_key = args.only
+      only_parse_val = None
+  else:
+    only_parse_key = None
 
   template = SvgTemplate(template_etree, [TextFilter(),
                                           BarcodeFilter(),
@@ -54,6 +68,11 @@ if __name__ == '__main__':
   curr_col = 0
   
   for row in data_reader:
+    if only_parse_key:
+      if ((only_parse_val is None and not row[only_parse_key]) or
+          (only_parse_val is not None and row[only_parse_key] != only_parse_val)):
+        continue
+    
     # TODO: make namespace parsing & handling general
     incx = units_to_pixels(template.get_config("incx")) * curr_col
     incy = units_to_pixels(template.get_config("incy")) * curr_row

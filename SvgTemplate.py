@@ -164,7 +164,7 @@ class BarcodeFilter(ImageFilter):
     
     attrs = elt_attrs_to_dict(rect_elt, ['x', 'y', 'height', 'width'])
     attrs['preserveAspectRatio'] = cmd.get_kw_arg('align', 'rescale alignment', 'xMidYMid')
-    quiet = cmd.get_kw_arg('quiet', 'add quiet zone')
+    quiet = cmd.get_kw_arg('quiet', 'add quiet zone', default='True')
     if quiet in ['true', 'True']:
       quiet = True
     elif quiet in ['False', 'false']:
