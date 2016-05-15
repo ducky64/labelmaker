@@ -62,10 +62,29 @@ if __name__ == '__main__':
                                           StyleFilter()])
   output = template.get_base()
   
-  num_rows = int(template.get_config('nrows'))
-  num_cols = int(template.get_config('ncols'))
-  curr_row = 0
-  curr_col = 0
+  num_rows = int(template.get_config('nrows', "number of rows (vertical elements)"))
+  num_cols = int(template.get_config('ncols', "number of columns (horizontal elements)"))
+  
+  dir = template.get_config('dir', 'direction (row or col)', 'col')
+  
+  incx = units_to_pixels(template.get_config("incx", "horizontal spacing"))
+  incy = units_to_pixels(template.get_config("incy", "vertical spacing"))
+    
+  if dir == 'row':
+    min_spacing = incx
+    maj_spacing = incy
+    min_max = num_cols
+    maj_max = num_rows
+  elif dir == 'col':
+    min_spacing = incy
+    maj_spacing = incx
+    min_max = num_rows
+    maj_max = num_cols
+  else:
+    assert False
+  
+  curr_min = 0
+  curr_maj = 0
   
   for row in data_reader:
     if only_parse_key:
@@ -73,20 +92,28 @@ if __name__ == '__main__':
           (only_parse_val is not None and row[only_parse_key] != only_parse_val)):
         continue
     
+    if dir == 'row':
+      offs_x = curr_min * incx
+      offs_y = curr_maj * incy
+    elif dir == 'col':
+      offs_y = curr_min * incy
+      offs_x = curr_maj * incx
+    else:
+      assert False
+
     # TODO: make namespace parsing & handling general
-    incx = units_to_pixels(template.get_config("incx")) * curr_col
-    incy = units_to_pixels(template.get_config("incy")) * curr_row
     new_group = ET.SubElement(output.getroot(), "{http://www.w3.org/2000/svg}g",
-                              attrib={"transform": "translate(%f ,%f)" % (incx, incy)})
+                              attrib={"transform": "translate(%f ,%f)" % (offs_x, offs_y)})
     
     for elt in template.generate(row):
       new_group.append(elt)
     
-    curr_row += 1
-    if curr_row == num_rows:
-      curr_row = 0
-      curr_col += 1
-    if curr_col == num_cols:
-      assert False, "TODO: handle col overflow, newpage support"
+    curr_min += 1
+    if curr_min == min_max:
+      curr_min = 0
+      curr_maj += 1
+    if curr_maj == maj_max:
+      assert False, "TODO: handle page overflow, newpage support"
       
   output.write(args.output)
+  
