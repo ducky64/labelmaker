@@ -1,0 +1,5 @@
+gridid,subgridid,title,package,quickdesc,mfrpn,desc,res_color1,res_color2,res_color3
+A1,-1,"Res, 1Ω",Axial,"±5%, 1/4W",CF14JT1R00,RES 1 OHM 1/4W 5% CARBON FILM,#964B00,#000000,#CFB53B
+A1,-2,"Res, 1.2Ω",Axial,"±5%, 1/4W",CFM14JT1R20,RES 1.2 OHM 1/4W 5% CF MINI,#964B00,#FF0000,#CFB53B
+A1,-3,"Res, 1.5Ω",Axial,"±5%, 1/4W",CFM14JT1R50,RES 1.5 OHM 1/4W 5% CF MINI,#964B00,#9ACD32,#CFB53B
+B1,-1,"Res, 1.8Ω",Axial,"±5%, 1/4W",CFM14JT1R80,RES 1.8 OHM 1/4W 5% CF MINI,#964B00,#A0A0A0,#CFB53B
