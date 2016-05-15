@@ -26,7 +26,7 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="2.8"
-     inkscape:cx="75.98816"
+     inkscape:cx="34.6550642"
      inkscape:cy="980.448062"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
@@ -52,7 +52,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -89,25 +89,15 @@
        id="text4144"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
-         id="tspan4146"
          x="-0.24169922"
          y="-67.453392"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.75px;font-family:Calibri;-inkscape-font-specification:Calibri">##incx=40mm</tspan><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.75px;font-family:Calibri;-inkscape-font-specification:Calibri"
+         id="tspan4166">#config incx=40mm incy=10mm</tspan><tspan
          sodipodi:role="line"
          x="-0.24169922"
-         y="-50.265896"
+         y="-50.265892"
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.75px;font-family:Calibri;-inkscape-font-specification:Calibri"
-         id="tspan4166">##incy=10mm</tspan><tspan
-         sodipodi:role="line"
-         x="-0.24169922"
-         y="-33.078396"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.75px;font-family:Calibri;-inkscape-font-specification:Calibri"
-         id="tspan4181">##nrows=8</tspan><tspan
-         sodipodi:role="line"
-         x="-0.24169922"
-         y="-15.890895"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:13.75px;font-family:Calibri;-inkscape-font-specification:Calibri"
-         id="tspan4185">##ncols=4</tspan></text>
+         id="tspan4185"> nrows=8 ncols=4 </tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:Sans;text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
@@ -151,7 +141,7 @@
            y="107.90583"
            x="70.866142"
            sodipodi:role="line"
-           id="tspan5751"> @align=xMinYMid %(desc)</tspan></text>
+           id="tspan5751"> align=xMinYMid %(desc)</tspan></text>
     </g>
   </g>
 </svg>
