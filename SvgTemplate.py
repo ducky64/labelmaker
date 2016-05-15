@@ -23,13 +23,19 @@ def strip_tag(tag):
 (in particular, line breaks may be ignored)"""
 def get_text_contents(elt):
   contents = []
+  
   def process_child(child_elt):
-    if strip_tag(child_elt.tag) not in ['text', 'tspan']:
+    if strip_tag(child_elt.tag) in ['text', 'tspan']:
+      if child_elt.text:
+        contents.append(child_elt.text)
+      for child_child_elt in child_elt:
+        process_child(child_child_elt)
+    elif strip_tag(child_elt.tag) in ['altGlyph', 'altGlyphDef', 'altGlyphItem', 'glyph', 'glyphRef', 'textPath', 'tref']:
       raise NotImplementedError("get_text_contents only supports tspan children, got '%s'" % strip_tag(child_elt.tag))
-    if child_elt.text:
-      contents.append(child_elt.text)
-    for child_child_elt in child_elt:
-      process_child(child_child_elt)
+    else:
+      # discard non-text elements
+      pass
+
   process_child(elt)
   return "".join(contents)
 
@@ -271,10 +277,13 @@ class SvgTemplate:
       self.base_etree.getroot().remove(template_elt)
   
   """Returns the parsed configuration (##var = val) as a string"""
-  def get_config(self, config_key):
+  def get_config(self, config_key, desc, default=None):
     # TODO: more user friendly error handling
     # TODO: add description
-    return self.config.get_kw_arg(config_key, "")
+    if default is None:
+      return self.config.get_kw_arg(config_key, desc)
+    else:
+      return self.config.get_kw_arg(config_key, desc, default)
   
   """Returns the non-template portion of the input SVG etree."""
   def get_base(self):
