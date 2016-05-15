@@ -3,7 +3,9 @@ Label sheet generator using SVG templates and CSV data.
 
 ## Example
 
-Coming soon!
+| Template | CSV | Output |
+|:---:|:---:|:---:|
+| ![Image](../master/docs/template_resistors.png?raw=true) | [resistors.csv](../master/docs/resistors.csv) | ![Image](../master/docs/gen_resistors.png?raw=true) |
 
 ## Caveat Emptor
 This is still in development and the API, including label template format and syntax, is subject to change. 
