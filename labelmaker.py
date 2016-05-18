@@ -60,7 +60,12 @@ if __name__ == '__main__':
   template = SvgTemplate(template_etree, [TextFilter(),
                                           BarcodeFilter(),
                                           StyleFilter()])
-  output = template.get_base()
+  
+  # Get the filename without the SVG extension so the page number can be added
+  if args.output[-4:] == '.svg':
+    output_name = args.output[:-4]
+  else:
+    output_name = args.output  
   
   num_rows = int(template.get_config('nrows', "number of rows (vertical elements)"))
   num_cols = int(template.get_config('ncols', "number of columns (horizontal elements)"))
@@ -85,12 +90,17 @@ if __name__ == '__main__':
   
   curr_min = 0
   curr_maj = 0
+  curr_page = 0
+  output = None
   
   for row in data_reader:
     if only_parse_key:
       if ((only_parse_val is None and not row[only_parse_key]) or
           (only_parse_val is not None and row[only_parse_key] != only_parse_val)):
         continue
+    
+    if output == None:
+      output = template.get_base()
     
     if dir == 'row':
       offs_x = curr_min * incx
@@ -113,7 +123,13 @@ if __name__ == '__main__':
       curr_min = 0
       curr_maj += 1
     if curr_maj == maj_max:
-      assert False, "TODO: handle page overflow, newpage support"
+      output.write("%s_%i.svg" % (output_name, curr_page))
       
-  output.write(args.output)
+      curr_maj = 0
+      curr_page += 1
+      
+      output = None
+  
+  if output is not None:
+    output.write("%s_%i.svg" % (output_name, curr_page))
   
