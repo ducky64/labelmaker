@@ -39,6 +39,10 @@ if __name__ == '__main__':
                       help="SVG generated labels output")
   parser.add_argument('--only', type=str, default=None,
                       help="only process rows which have this key nonempty")
+  parser.add_argument('--start_row', type=int, default=0,
+                      help="starting row, zero is topmost")
+  parser.add_argument('--start_col', type=int, default=0,
+                      help="starting column, zero is leftmost")
   args = parser.parse_args()
   
   ET.register_namespace('', "http://www.w3.org/2000/svg")
@@ -62,7 +66,7 @@ if __name__ == '__main__':
                                           StyleFilter()])
   
   # Get the filename without the SVG extension so the page number can be added
-  if args.output[-4:] == '.svg':
+  if args.output[-4:].lower() == '.svg'.lower():
     output_name = args.output[:-4]
   else:
     output_name = args.output  
@@ -80,16 +84,21 @@ if __name__ == '__main__':
     maj_spacing = incy
     min_max = num_cols
     maj_max = num_rows
+    curr_min = args.start_col
+    curr_maj = args.start_row
   elif dir == 'col':
     min_spacing = incy
     maj_spacing = incx
     min_max = num_rows
     maj_max = num_cols
+    curr_min = args.start_row
+    curr_maj = args.start_col
   else:
     assert False
   
-  curr_min = 0
-  curr_maj = 0
+  assert curr_min < min_max, "starting position exceeds bounds"
+  assert curr_maj < maj_max, "starting position exceeds bounds"
+
   curr_page = 0
   output = None
   

@@ -11,13 +11,14 @@ Label sheet generator using SVG templates and CSV data.
 This is still in development and the API, including label template format and syntax, is subject to change. 
 
 ## Usage
-`python labelmaker.py <template-svg> <csv-data> <output-filename>`
+`python labelmaker.py <template-svg> <csv-data> <output-filename> [--start_row=n] [--start_col=n]`
 
 where the arguments are:
 
 - `template-svg`: SVG template for the label. More information below.
 - `csv-data`: CSV data file, one row being one label.
-- `output-filename`: should be obvious, will overwrite if the file already exists.
+- `output-filename`: Output filename prefix, actual generated files will be named `output-filename_0.svg`, `output-filename_1.svg`, etc. If `.svg` is part of the output filename, the page number will be appended before the `.svg`.
+- `n`: starting row or column, where zero is either the topmost row or leftmost column.
 
 ### Requirements
 Works best on Python3. Barcode functionality requires PIL, a Python imaging library.
@@ -45,7 +46,7 @@ Configuration parameters are specified in the template as a text element. The la
 `#config nrows=<rows> ncols=<cols> dir=<dir> incx=<increment> incy=<increment>`
 
 - `increment` is the distance succesive labels are moved in either the y (vertical) or x\ (horizontal) direction. Positive is downwards or leftwards translation (by SVG convention). Understands standard SVG [units](https://www.w3.org/TR/SVG/coords.html#Units).
-- `rows`, `cols`: number of labels in a row or column before a new row, column, or page is started. Note: multipage support is not available yet. 
+- `rows`, `cols`: number of labels in a row or column before a new row, column, or page is started.
 - `dir`: either `row` or `col`, indicates the successive label increment direction.
 
 ## Copyright and acknowledgments
