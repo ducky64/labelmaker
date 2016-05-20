@@ -11,7 +11,7 @@ Label sheet generator using SVG templates and CSV data.
 This is still in development and the API, including label template format and syntax, is subject to change. 
 
 ## Usage
-`python labelmaker.py <template-svg> <csv-data> <output-filename> [--start_row=n] [--start_col=n]`
+`python labelmaker.py <template-svg> <csv-data> <output-filename> [--start_row=n] [--start_col=n] [--dir=dir]`
 
 where the arguments are:
 
@@ -19,6 +19,7 @@ where the arguments are:
 - `csv-data`: CSV data file, one row being one label.
 - `output-filename`: Output filename prefix, actual generated files will be named `output-filename_0.svg`, `output-filename_1.svg`, etc. If `.svg` is part of the output filename, the page number will be appended before the `.svg`.
 - `n`: starting row or column, where zero is either the topmost row or leftmost column.
+- `dir`: direction labels are incremented in, `col` (default) means top to bottom, then left to right, while `row` means left to right, then top to bottom. 
 
 ### Requirements
 Works best on Python3. Barcode functionality requires PIL, a Python imaging library.
