@@ -43,6 +43,9 @@ if __name__ == '__main__':
                       help="starting row, zero is topmost")
   parser.add_argument('--start_col', type=int, default=0,
                       help="starting column, zero is leftmost")
+  parser.add_argument('--dir', type=str, default='col',
+                      choices=['col', 'row'],
+                      help="direction labels are incremented in")
   args = parser.parse_args()
   
   ET.register_namespace('', "http://www.w3.org/2000/svg")
@@ -74,19 +77,17 @@ if __name__ == '__main__':
   num_rows = int(template.get_config('nrows', "number of rows (vertical elements)"))
   num_cols = int(template.get_config('ncols', "number of columns (horizontal elements)"))
   
-  dir = template.get_config('dir', 'direction (row or col)', 'col')
-  
   incx = units_to_pixels(template.get_config("incx", "horizontal spacing"))
   incy = units_to_pixels(template.get_config("incy", "vertical spacing"))
     
-  if dir == 'row':
+  if args.dir == 'row':
     min_spacing = incx
     maj_spacing = incy
     min_max = num_cols
     maj_max = num_rows
     curr_min = args.start_col
     curr_maj = args.start_row
-  elif dir == 'col':
+  elif args.dir == 'col':
     min_spacing = incy
     maj_spacing = incx
     min_max = num_rows
@@ -111,10 +112,10 @@ if __name__ == '__main__':
     if output == None:
       output = template.get_base()
     
-    if dir == 'row':
+    if args.dir == 'row':
       offs_x = curr_min * incx
       offs_y = curr_maj * incy
-    elif dir == 'col':
+    elif args.dir == 'col':
       offs_y = curr_min * incy
       offs_x = curr_maj * incx
     else:
