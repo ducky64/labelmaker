@@ -1,10 +1,20 @@
 import argparse
 import csv
 import codecs
+import configparser
 import xml.etree.ElementTree as ET
 import re
 
 from SvgTemplate import SvgTemplate, TextFilter, BarcodeFilter, StyleFilter
+
+# TODO: deduplicate with SvgTemplate, also generally more elegant handling of
+# namespaces
+"""Removes the namespace from a XML tag"""
+def strip_tag(tag):
+  if "}" in tag:
+    return tag.split('}', 1)[1]
+  else:
+    return tag
 
 class LabelmakerInputException(Exception):
   pass
@@ -29,10 +39,18 @@ def units_to_pixels(units_num):
     num *= UNITS_TO_PX[units]
   return num
 
+def config_get(config, section, option, desc):
+  val = config.get(section, option, fallback=None)
+  if val is None:
+    assert False, "Configuration not specified for %s.%s (%s)" % (section, option, desc)
+  return val
+
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description="Generate label sheet from SVG template")
   parser.add_argument('template', type=str,
                       help="SVG label template")
+  parser.add_argument('config', type=str,
+                      help="label sheet configuration")
   parser.add_argument('data', type=str,
                       help="CSV data")
   parser.add_argument('output', type=str,
@@ -64,6 +82,9 @@ if __name__ == '__main__':
   else:
     only_parse_key = None
 
+  config = configparser.ConfigParser()
+  config.read(args.config)
+
   template = SvgTemplate(template_etree, [TextFilter(),
                                           BarcodeFilter(),
                                           StyleFilter()])
@@ -74,11 +95,17 @@ if __name__ == '__main__':
   else:
     output_name = args.output  
   
-  num_rows = int(template.get_config('nrows', "number of rows (vertical elements)"))
-  num_cols = int(template.get_config('ncols', "number of columns (horizontal elements)"))
+  num_rows = int(config_get(config, 'sheet', 'nrows', "number of rows (vertical elements)"))
+  num_cols = int(config_get(config, 'sheet', 'ncols', "number of columns (horizontal elements)"))
+
+  offx = units_to_pixels(config_get(config, 'sheet', 'offx', "initial horizontal offset"))
+  offy = units_to_pixels(config_get(config, 'sheet', 'offy', "initial vertical offset"))
+
+  incx = units_to_pixels(config_get(config, 'sheet', 'incx', "horizontal spacing"))
+  incy = units_to_pixels(config_get(config, 'sheet', 'incy', "vertical spacing"))
   
-  incx = units_to_pixels(template.get_config("incx", "horizontal spacing"))
-  incy = units_to_pixels(template.get_config("incy", "vertical spacing"))
+  sheet_sizex = units_to_pixels(config_get(config, 'sheet', 'sizex', "sheet width"))
+  sheet_sizey = units_to_pixels(config_get(config, 'sheet', 'sizey', "sheet height"))
     
   if args.dir == 'row':
     min_spacing = incx
@@ -110,20 +137,26 @@ if __name__ == '__main__':
         continue
     
     if output == None:
-      output = template.get_base()
+      output = template.clone_base()
+      
+      svg_elt = output.getroot()
+      assert strip_tag(svg_elt.tag) == 'svg'
+      svg_elt.set('width', str(sheet_sizex))
+      svg_elt.set('height', str(sheet_sizey))
+      svg_elt.set('viewBox', '{0 0 %s %s}' % (sheet_sizex, sheet_sizey))
     
     if args.dir == 'row':
-      offs_x = curr_min * incx
-      offs_y = curr_maj * incy
+      pos_x = offx + curr_min * incx
+      pos_y = offy + curr_maj * incy
     elif args.dir == 'col':
-      offs_y = curr_min * incy
-      offs_x = curr_maj * incx
+      pos_y = offy + curr_min * incy
+      pos_x = offx + curr_maj * incx
     else:
       assert False
 
     # TODO: make namespace parsing & handling general
     new_group = ET.SubElement(output.getroot(), "{http://www.w3.org/2000/svg}g",
-                              attrib={"transform": "translate(%f ,%f)" % (offs_x, offs_y)})
+                              attrib={"transform": "translate(%f ,%f)" % (pos_x, pos_y)})
     
     for elt in template.generate(row):
       new_group.append(elt)

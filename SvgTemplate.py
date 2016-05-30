@@ -236,10 +236,7 @@ class SvgTemplate:
     self.filters = filters
     
     self.base_etree = copy.deepcopy(template_etree)
-  
-    # Parse template-inline configurations
-    self.config = None
-    
+
     """
     Recursively goes through elements looking for a text element with a #config
     command. Returns true if it finds one (so it can be removed by the caller),
@@ -249,24 +246,12 @@ class SvgTemplate:
       if strip_tag(elt.tag) in ["text", "tspan"]:
         text = get_text_contents(elt)
         if text.startswith('#config'):
-          if self.config is not None:
-            raise TemplateError("Duplicate config commands found: '%s', '%s'" % (self.config.cmd_str, text))
-          self.config = Command(text)
-          return True
-        return False
+          raise TemplateError("Inline command syntax removed in favor of separate config file. See updated README.")
       else:
-        remove_list = []
         for child in elt:
-          if config_parse(child):
-            remove_list.append(child)
-        for remove_elt in remove_list:
-          elt.remove(remove_elt)
-        return False
+          config_parse(child)
       
     config_parse(self.base_etree.getroot())
-    
-    if self.config is None:
-      raise TemplateError("No config command found")
 
     # Split etree between base and template
     self.template_elts = []
@@ -276,17 +261,8 @@ class SvgTemplate:
     for template_elt in self.template_elts:
       self.base_etree.getroot().remove(template_elt)
   
-  """Returns the parsed configuration (##var = val) as a string"""
-  def get_config(self, config_key, desc, default=None):
-    # TODO: more user friendly error handling
-    # TODO: add description
-    if default is None:
-      return self.config.get_kw_arg(config_key, desc)
-    else:
-      return self.config.get_kw_arg(config_key, desc, default)
-  
   """Returns the non-template portion of the input SVG etree."""
-  def get_base(self):
+  def clone_base(self):
     return copy.deepcopy(self.base_etree)
   
   """Instantiate the template on a input set of data (a dict of keys to values),
