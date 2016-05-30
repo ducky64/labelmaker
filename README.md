@@ -11,11 +11,12 @@ Label sheet generator using SVG templates and CSV data.
 This is still in development and the API, including label template format and syntax, is subject to change. 
 
 ## Usage
-`python labelmaker.py <template-svg> <csv-data> <output-filename> [--start_row=n] [--start_col=n] [--dir=dir]`
+`python labelmaker.py <template-svg> <sheet-cofig> <csv-data> <output-filename> [--start_row=n] [--start_col=n] [--dir=dir]`
 
 where the arguments are:
 
 - `template-svg`: SVG template for the label. More information below.
+- `sheet-config`: [INI-style](https://docs.python.org/3/library/configparser.html) configuration file specifying label sheet parameters.
 - `csv-data`: CSV data file, one row being one label.
 - `output-filename`: Output filename prefix, actual generated files will be named `output-filename_0.svg`, `output-filename_1.svg`, etc. If `.svg` is part of the output filename, the page number will be appended before the `.svg`.
 - `n`: starting row or column, where zero is either the topmost row or leftmost column.
@@ -25,7 +26,7 @@ where the arguments are:
 Works best on Python3. Barcode functionality requires PIL, a Python imaging library.
 
 ## Templates
-Templates are SVG files with the page sized to the printing area and the contents of a single label placed at the "first" position. For each row in the CSV data file, the contents of the template are duplicated and shifted by a specified amount.
+Templates are SVG files with the page sized to a single label. For each row in the CSV data file, the contents of the template are duplicated and shifted by a specified amount.
 
 ### Syntax
 The template command syntax used in this document is:
@@ -43,12 +44,17 @@ Filters modify element(s) in a template instance based on data in the CSV row. T
 - Style filter: takes in a group containing an element (currently limited to rectangles) and a text element (containing the command), alters `style` components (see SVG spec [here](https://www.w3.org/TR/SVG/styling.html)). Command syntax is `#style [<style-name>=<new-style-val>]`, where the style name - value pairs can be repeated. Replaces the existing style property if one exists, otherwise adds it to the property list.
 
 ### Configuration
-Configuration parameters are specified in the template as a text element. The label creation process will discard these elements so they will not show up in the output. The configuration syntax is:
-`#config nrows=<rows> ncols=<cols> dir=<dir> incx=<increment> incy=<increment>`
+Configuration parameters used to be specified in the label templates, but have been moved to a separate file. The `#config` command will now cause an error. Having configurations in a separate file allows the SVG templates to be sized to a single label (which may help design) and allows the same template to generate to different sized sheets.
 
-- `increment` is the distance succesive labels are moved in either the y (vertical) or x\ (horizontal) direction. Positive is downwards or leftwards translation (by SVG convention). Understands standard SVG [units](https://www.w3.org/TR/SVG/coords.html#Units).
-- `rows`, `cols`: number of labels in a row or column before a new row, column, or page is started.
-- `dir`: either `row` or `col`, indicates the successive label increment direction.
+## Sheet Configuration
+Sheet configuration specify the sheet parameters, like the page size, how many labels are in a sheet, and the spacing between labels. See the `config/` folder for examples. Note that fields that expect a length parameter understands [SVG units](https://www.w3.org/TR/SVG/coords.html#Units), so an input like `1 mm` is valid.
+
+These are options in the `[sheet]` section:
+- `sizex`, `sizey`: page size.
+- `offx`, `offy`: offset distance to first label from top left of page. Positive is rightwards and downwards (by SVG convention).
+- `incx`, `incy`: distance between successive labels, this does NOT take into account size of the templates (so a 0 entry means labels will be overlapped!). Positive is rightwards and downwards (by SVG convention).
+- `nrows`, `ncols`: number of labels in a row, or column before a new column, row, or page is started.
+
 
 ## Copyright and acknowledgments
 The following pieces of external code are used:
