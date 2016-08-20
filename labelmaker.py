@@ -4,6 +4,10 @@ import codecs
 import configparser
 import xml.etree.ElementTree as ET
 import re
+import sys
+reload(sys)
+sys.setdefaultencoding('UTF8')
+
 
 from SvgTemplate import SvgTemplate, TextFilter, BarcodeFilter, StyleFilter
 
@@ -46,6 +50,7 @@ def config_get(config, section, option, desc):
   return val
 
 if __name__ == '__main__':
+  sys.setdefaultencoding('UTF8')
   parser = argparse.ArgumentParser(description="Generate label sheet from SVG template")
   parser.add_argument('template', type=str,
                       help="SVG label template")
