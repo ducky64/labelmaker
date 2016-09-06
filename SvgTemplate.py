@@ -1,6 +1,7 @@
 import base64
 from collections import OrderedDict
 import copy
+import os
 import re
 import xml.etree.ElementTree as ET
 
@@ -23,7 +24,7 @@ def strip_tag(tag):
 (in particular, line breaks may be ignored)"""
 def get_text_contents(elt):
   contents = []
-  
+
   def process_child(child_elt):
     if strip_tag(child_elt.tag) in ['text', 'tspan']:
       if child_elt.text:
@@ -39,17 +40,37 @@ def get_text_contents(elt):
   process_child(elt)
   return "".join(contents)
 
+# from http://www.w3.org/TR/SVG/coords.html#Units
+UNITS_TO_PX = {
+  "pt": 1.25,
+  "pc": 15,
+  "mm": 3.543307,
+  "cm": 35.43307,
+  "in" : 90
+  }
+def units_to_pixels(units_num):
+  match = re.search(r"(\d*.?\d+)\s*(\w*)", units_num)
+  if not match:
+    raise LabelmakerInputException("Caanot parse length '%s'" % units_num)
+
+  num = float(match.group(1))
+  units = match.group(2)
+  if units:
+    assert units in UNITS_TO_PX
+    num *= UNITS_TO_PX[units]
+  return num
+
 class TemplateFilter:
   """Apply this filter on a elemement. Called once for each element in the
   SVG tree in preorder traversal. May mutate both the element and its children.
-  """ 
-  def apply(self, elt, data_dict):
+  """
+  def apply(self, template, elt, data_dict):
     raise NotImplementedError()
 
 """A class that does text replacement on text and tspan content using Python
 style string interpolation"""
 class TextFilter(TemplateFilter):
-  def apply(self, elt, data_dict):
+  def apply(self, template, elt, data_dict):
     if strip_tag(elt.tag) in ['text', 'tspan', 'flowRoot', 'flowPara', 'flowSpan'] and elt.text:
       def parsed(match):
         key = match.group(1)
@@ -62,15 +83,17 @@ class TextFilter(TemplateFilter):
 and rectangle (image sizing) with an image
 The rectangle is replaced with the image, and the text element is removed (this
 preserves any transforms within the group)."""
-class ImageFilter(TemplateFilter):
+class AreaFilter(TemplateFilter):
   """Perform image substitution given the text and rectangle element
   Can return either a list of SVG elements to insert into the group, or None to
-  leave things as-is (for example, if the text command isn't valid.
+  leave things as-is (if the command isn't applicable).
+
+  TODO: better API that isn't guess and check.
   """
-  def replace(self, text, rect_elt):
+  def replace(self, template, command_text, rect_elt):
     raise NotImplementedError()
-  
-  def apply(self, elt, data_dict):
+
+  def apply(self, template, elt, data_dict):
     # Check if is a group, and if so, if only two elements are a text and rect
     if strip_tag(elt.tag) != 'g' or len(elt) != 2:
       return
@@ -82,8 +105,8 @@ class ImageFilter(TemplateFilter):
       text_elt = elt[0]
     else:
       return
-      
-    new_elts = self.replace(get_text_contents(text_elt), rect_elt)
+
+    new_elts = self.replace(template, get_text_contents(text_elt), rect_elt)
     if new_elts is not None:
       elt.remove(rect_elt)
       elt.remove(text_elt)
@@ -127,10 +150,13 @@ class Command:
         self.kw_args[arg_split[0]] = arg_split[1]
       else:
         self.pos_args.append(cmd_arg)
-        
+
     self.kw_args_accessed = set()
     self.pos_args_accessed = set()
-         
+
+  def get_num_pos_args(self):
+    return len(self.pos_args)
+
   def get_pos_arg(self, index, desc):
     if index >= len(self.pos_args):
       raise CommandSyntaxError("Command '%s' missing arg %i (%s)" % (self.cmd_str, index, desc))
@@ -162,12 +188,12 @@ class Command:
 Takes in a command and a rect elt in a group and generates a code128 barcode
 image (sized to the rect) which is then embedded into the SVG.
 """
-class BarcodeFilter(ImageFilter):
-  def replace(self, text, rect_elt):
-    if not text.startswith('#code128'):
-      return
-    cmd = Command(text)
-    
+class BarcodeFilter(AreaFilter):
+  def replace(self, template, command_text, rect_elt):
+    if not command_text.startswith('#code128'):
+      return None
+    cmd = Command(command_text)
+
     attrs = elt_attrs_to_dict(rect_elt, ['x', 'y', 'height', 'width'])
     attrs['preserveAspectRatio'] = cmd.get_kw_arg('align', 'rescale alignment', 'xMidYMid')
     quiet = cmd.get_kw_arg('quiet', 'add quiet zone', default='True')
@@ -180,31 +206,29 @@ class BarcodeFilter(ImageFilter):
     thickness = int(cmd.get_kw_arg('thickness', 'barcode thickness', 3))
     val = cmd.get_pos_arg(0, 'barcode value')
     cmd.finalize()
-    
+
     image = Code128.code128_image(val, thickness=thickness, quiet_zone=quiet)
     image_output = BytesIO()
     image.save(image_output, format='PNG')
     image_base64 = base64.b64encode(image_output.getvalue())
     image_output.close()
-    data_string = "data:image/png;base64," + image_base64.decode("utf-8") 
+    data_string = "data:image/png;base64," + image_base64.decode("utf-8")
     attrs['{http://www.w3.org/1999/xlink}href'] = data_string
-    
-    image_elt = ET.Element('image', attrs)
-    
-    return [image_elt]
-    
+
+    return [ET.Element('image', attrs)]
+
 """
 Takes in a command and a rect (may be less restricted in the future) in a group
 and changes the style attribute based. Each keyword argument in the command
 becomes a style key/value, overwriting existing ones. Order of style elements
-in the SVG is preserved. 
+in the SVG is preserved.
 """
-class StyleFilter(ImageFilter):
-  def replace(self, text, rect_elt):
-    if not text.startswith('#style'):
-      return
-    cmd = Command(text)
-    
+class StyleFilter(AreaFilter):
+  def replace(self, template, command_text, rect_elt):
+    if not command_text.startswith('#style'):
+      return None
+    cmd = Command(command_text)
+
     style_dict = OrderedDict()
     for style_kv in rect_elt.get('style', '').split(';'):
       kv = style_kv.split(':')
@@ -212,18 +236,61 @@ class StyleFilter(ImageFilter):
       if kv[0] in style_dict:
         raise SvgTemplateException("Duplicate style key '%s' in template" % kv[0])
       style_dict[kv[0]] = kv[1]
-    
+
     for kwkey in cmd.get_kw_keys():
       style_dict[kwkey] = cmd.get_kw_arg(kwkey, "(style key-argument pair)")
-    
+
     style_elts = ['%s:%s' % (k, v) for k, v in style_dict.items()]
     rect_elt.set('style', ';'.join(style_elts))
-    
+
     return [rect_elt]
-    
+
+"""
+Takes in a command and a rect (may be less restricted in the future) in a group
+and includes sub-SVG files. Templating is not done on the included SVG files.
+By default, centers the included SVG (by viewport) without scaling.
+In the future, will clip the included SVG to the rectangular area.
+"""
+class SvgFilter(AreaFilter):
+  def replace(self, template, command_text, rect_elt):
+    if not command_text.startswith('#svg'):
+      return None
+    cmd = Command(command_text)
+
+    outputs = []
+
+    attrs = elt_attrs_to_dict(rect_elt, ['x', 'y', 'height', 'width'])
+    rect_center_x = units_to_pixels(rect_elt.get('x')) + (units_to_pixels(rect_elt.get('width')) / 2)
+    rect_center_y = units_to_pixels(rect_elt.get('y')) + (units_to_pixels(rect_elt.get('height')) / 2)
+
+    template_dir = template.get_template_directory()
+
+    for i in range(cmd.get_num_pos_args()):
+      sub_etree = ET.parse(os.path.join(template_dir, cmd.get_pos_arg(i, "SVG file to include"))).getroot()
+      sub_width = units_to_pixels(sub_etree.get('width'))
+      sub_height = units_to_pixels(sub_etree.get('height'))
+      sub_viewbox = sub_etree.get('viewBox').split(' ')
+      sub_viewbox = [float(elt) for elt in sub_viewbox]
+      assert sub_viewbox[0] == 0, "TODO: support viewbox with origin != 0"
+      assert sub_viewbox[1] == 0, "TODO: support viewbox with origin != 0"
+      assert abs(sub_viewbox[2] - sub_width) < 0.1, "TODO: support viewbox width != svg width"
+      assert abs(sub_viewbox[3] - sub_height) < 0.1, "TODO: support viewbox height != svg height"
+
+      delta_x = rect_center_x - (sub_width / 2)
+      delta_y = rect_center_y - (sub_height / 2)
+
+      new_group = ET.Element('{http://www.w3.org/2000/svg}g',
+                             attrib={"transform": "translate(%f ,%f)" % (delta_x, delta_y)})
+      for elt in sub_etree:
+        new_group.append(elt)
+
+      outputs.append(new_group)
+
+    return outputs
+
 class TemplateError(Exception):
   pass
-    
+
 class SvgTemplate:
   # a whitelist of SVG XML tags to treat as the template part
   SVG_ELEMENTS = ["g"]
@@ -231,27 +298,11 @@ class SvgTemplate:
   """Initialize a template from a SVG etree and list of filters to apply
   Note: filter order matters, filters are run sequentially through the tree
   (each filter is run through the whole tree before the next filter runs).
-  """ 
-  def __init__(self, template_etree, filters):
+  """
+  def __init__(self, template_filename, filters):
+    self.template_filename = template_filename
+    self.base_etree = ET.parse(template_filename)
     self.filters = filters
-    
-    self.base_etree = copy.deepcopy(template_etree)
-
-    """
-    Recursively goes through elements looking for a text element with a #config
-    command. Returns true if it finds one (so it can be removed by the caller),
-    otherwise returns False.
-    """
-    def config_parse(elt):
-      if strip_tag(elt.tag) in ["text", "tspan"]:
-        text = get_text_contents(elt)
-        if text.startswith('#config'):
-          raise TemplateError("Inline command syntax removed in favor of separate config file. See updated README.")
-      else:
-        for child in elt:
-          config_parse(child)
-      
-    config_parse(self.base_etree.getroot())
 
     # Split etree between base and template
     self.template_elts = []
@@ -260,23 +311,29 @@ class SvgTemplate:
         self.template_elts.append(child_elt)
     for template_elt in self.template_elts:
       self.base_etree.getroot().remove(template_elt)
-  
+
   """Returns the non-template portion of the input SVG etree."""
   def clone_base(self):
     return copy.deepcopy(self.base_etree)
-  
+
+  """Returns the list of filters for this template."""
+  def get_filters_list(self):
+    return self.filters
+
+  def get_template_directory(self):
+    return os.path.dirname(self.template_filename)
+
   """Instantiate the template on a input set of data (a dict of keys to values),
   returning a list of SVG etree nodes."""
   def generate(self, data_dict):
     def substitute(filter_obj, elt):
-      filter_obj.apply(elt, data_dict)
+      filter_obj.apply(self, elt, data_dict)
       for child in elt:
         substitute(filter_obj, child)
-    
+
     elts = copy.deepcopy(self.template_elts)
     for filter_obj in self.filters:
       for elt in elts:
         substitute(filter_obj, elt)
-      
+
     return elts
-  
