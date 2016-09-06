@@ -5,7 +5,7 @@ import configparser
 import xml.etree.ElementTree as ET
 import re
 
-from SvgTemplate import SvgTemplate, TextFilter, BarcodeFilter, StyleFilter, SvgFilter, units_to_pixels, strip_tag
+from SvgTemplate import SvgTemplate, TextFilter, ShowFilter, BarcodeFilter, StyleFilter, SvgFilter, units_to_pixels, strip_tag
 
 class LabelmakerInputException(Exception):
   pass
@@ -56,6 +56,7 @@ if __name__ == '__main__':
   config.read(args.config)
 
   template = SvgTemplate(args.template, [TextFilter(),
+                                         ShowFilter(),
                                          BarcodeFilter(),
                                          StyleFilter(),
                                          SvgFilter(),

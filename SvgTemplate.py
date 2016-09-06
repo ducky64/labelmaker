@@ -84,7 +84,7 @@ and rectangle (image sizing) with an image
 The rectangle is replaced with the image, and the text element is removed (this
 preserves any transforms within the group)."""
 class AreaFilter(TemplateFilter):
-  """Perform image substitution given the text and rectangle element
+  """Perform substitution given the text and rectangle element
   Can return either a list of SVG elements to insert into the group, or None to
   leave things as-is (if the command isn't applicable).
 
@@ -183,6 +183,33 @@ class Command:
     kw_args_unaccessed = set(self.kw_args.keys()) - self.kw_args_accessed
     if kw_args_unaccessed:
       raise CommandSyntaxError("Command '%s' has unused keyword arguments %s" % (self.cmd_str, kw_args_unaccessed))
+
+"""Deletes the contents of a group if conditions are not met."""
+class ShowFilter(TemplateFilter):
+  def apply(self, template, elt, data_dict):
+    # Check if is a group, and if so, if only two elements are a text and rect
+    if strip_tag(elt.tag) != 'g':
+      return
+
+    cmd_text = None
+    cmd_elt = None
+    for subelt in elt:
+      if strip_tag(subelt.tag) == 'text' and get_text_contents(subelt).startswith('#showeq'):
+        assert cmd_text is None, "Found multiple #show command in same group"
+        cmd_text = get_text_contents(subelt)
+        cmd_elt = subelt
+
+    if cmd_text is None:
+      return
+
+    elt.remove(cmd_elt)
+    cmd = Command(cmd_text)
+
+    str_check = cmd.get_pos_arg(0, "item to check")
+    str_in = [cmd.get_pos_arg(i, "allowed value") for i in range(1, cmd.get_num_pos_args())]
+
+    if str_check not in str_in:
+      elt.clear()
 
 """
 Takes in a command and a rect elt in a group and generates a code128 barcode
