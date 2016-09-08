@@ -221,8 +221,18 @@ class BarcodeFilter(AreaFilter):
       return None
     cmd = Command(command_text)
 
-    attrs = elt_attrs_to_dict(rect_elt, ['x', 'y', 'height', 'width'])
-    attrs['preserveAspectRatio'] = cmd.get_kw_arg('align', 'rescale alignment', 'xMidYMid')
+    # empty request generates nothing
+    if cmd.get_num_pos_args() == 0:
+      return []
+
+    x = units_to_pixels(rect_elt.get('x'))
+    width = units_to_pixels(rect_elt.get('width'))
+
+    y_str = rect_elt.get('y')
+    height_str = rect_elt.get('height')
+
+    alignment = cmd.get_kw_arg('align', 'alignment', 'xMid')
+    fill = cmd.get_kw_arg('fill', 'fill color', '#000000')
     quiet = cmd.get_kw_arg('quiet', 'add quiet zone', default='True')
     if quiet in ['true', 'True']:
       quiet = True
@@ -230,19 +240,46 @@ class BarcodeFilter(AreaFilter):
       quiet = False
     else:
       raise CommandSyntaxError("quiet='%s' not a bool" % quiet)
-    thickness = int(cmd.get_kw_arg('thickness', 'barcode thickness', 3))
+    thickness = units_to_pixels(cmd.get_kw_arg('thickness', 'barcode thickness', 3))
     val = cmd.get_pos_arg(0, 'barcode value')
     cmd.finalize()
 
-    image = Code128.code128_image(val, thickness=thickness, quiet_zone=quiet)
-    image_output = BytesIO()
-    image.save(image_output, format='PNG')
-    image_base64 = base64.b64encode(image_output.getvalue())
-    image_output.close()
-    data_string = "data:image/png;base64," + image_base64.decode("utf-8")
-    attrs['{http://www.w3.org/1999/xlink}href'] = data_string
+    barcode_widths = Code128.code128_widths(val)
+    barcode_widths = [x * thickness for x in barcode_widths]
+    barcode_width = sum(barcode_widths)
 
-    return [ET.Element('image', attrs)]
+    if quiet:
+      barcode_width += 20 * thickness
+    if barcode_width > width:
+      raise SvgTemplateException("Barcode '%s' with width %s exceeds allocated width %s" % (val, barcode_width, width))
+
+    if alignment == 'xMin':
+      curr_x = x
+    elif alignment == 'xMid':
+      curr_x = x + ((width - barcode_width) / 2)
+    elif alignment == 'xMax':
+      curr_x = x + width - barcode_width
+
+    if quiet:
+      curr_x += 10 * thickness
+
+    assert len(barcode_widths) % 2 == 1
+
+    output_elts = []
+    draw_bar = True
+    for bar_width in barcode_widths:
+      if draw_bar:
+        output_elts.append(ET.Element('rect', {
+          'x': str(curr_x),
+          'y': y_str,
+          'width': str(bar_width),
+          'height': height_str,
+          'style': 'stroke:none;fill:%s;fill-opacity:1' % (fill),
+        }))
+      curr_x += bar_width
+      draw_bar = not draw_bar
+
+    return output_elts
 
 """
 Takes in a command and a rect (may be less restricted in the future) in a group

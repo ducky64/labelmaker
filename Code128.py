@@ -1,11 +1,11 @@
 # from https://gist.github.com/ekarulf/701416
 #
 # Copyright (c) 2010 Erik Karulf (erik@karulf.com)
-# 
+#
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
 # copyright notice and this permission notice appear in all copies.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
 # WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
 # MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
@@ -145,7 +145,7 @@ def code128_format(data):
     text     = str(data)
     pos      = 0
     length   = len(text)
-    
+
     # Start Code
     if text[:2].isdigit() and length > 1:
         charset = CODE128C
@@ -153,7 +153,7 @@ def code128_format(data):
     else:
         charset = CODE128B
         codes   = [charset['StartB']]
-    
+
     # Data
     while pos < length:
         if charset is CODE128C:
@@ -173,25 +173,32 @@ def code128_format(data):
             # Encode Code B one character at a time
             codes.append(charset[text[pos]])
             pos += 1
-    
+
     # Checksum
     checksum = 0
     for weight, code in enumerate(codes):
         checksum += max(weight, 1) * code
     codes.append(checksum % 103)
-    
+
     # Stop Code
     codes.append(charset['Stop'])
     return codes
 
-def code128_image(data, height=100, thickness=3, quiet_zone=True):
+def code128_widths(data):
     if not data[-1] == CODE128B['Stop']:
         data = code128_format(data)
-    
+
     barcode_widths = []
     for code in data:
         for weight in WEIGHTS[code]:
-            barcode_widths.append(int(weight) * thickness)
+            barcode_widths.append(int(weight))
+
+    return barcode_widths
+
+def code128_image(data, height=100, thickness=3, quiet_zone=True):
+    barcode_widths = code128_widths(data, quiet_zone)
+    barcode_widths = [x * thickness for x in barcode_widths]
+
     width = sum(barcode_widths)
     x = 0
 
@@ -210,4 +217,3 @@ def code128_image(data, height=100, thickness=3, quiet_zone=True):
         x += width
 
     return img
-  
