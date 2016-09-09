@@ -14,9 +14,6 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE
 
-from PIL import Image
-from PIL import ImageDraw
-
 # Copied from http://en.wikipedia.org/wiki/Code_128
 # Value Weights 128A    128B    128C
 CODE128_CHART = """
@@ -194,26 +191,3 @@ def code128_widths(data):
             barcode_widths.append(int(weight))
 
     return barcode_widths
-
-def code128_image(data, height=100, thickness=3, quiet_zone=True):
-    barcode_widths = code128_widths(data, quiet_zone)
-    barcode_widths = [x * thickness for x in barcode_widths]
-
-    width = sum(barcode_widths)
-    x = 0
-
-    if quiet_zone:
-        width += 20 * thickness
-        x = 10 * thickness
-
-    # Monochrome Image
-    img  = Image.new('RGBA', (width, height))
-    draw = ImageDraw.Draw(img)
-    draw_bar = True
-    for width in barcode_widths:
-        if draw_bar:
-            draw.rectangle(((x, 0), (x + width - 1, height)), fill=(0, 0, 0))
-        draw_bar = not draw_bar
-        x += width
-
-    return img
