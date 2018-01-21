@@ -42,12 +42,12 @@ def get_text_contents(elt):
 
 # from http://www.w3.org/TR/SVG/coords.html#Units
 UNITS_TO_PX = {
-  "pt": 1.25,
-  "pc": 15,
-  "mm": 3.543307,
-  "cm": 35.43307,
-  "in" : 90
-  }
+  "pt": (False, 1.25),
+  "pc": (False, 15),
+  "mm": (True, 3.543307),
+  "cm": (True, 35.43307),
+  "in": (True, 90)
+}
 def units_to_pixels(units_num):
   match = re.search(r"(\d*.?\d+)\s*(\w*)", units_num)
   if not match:
@@ -57,8 +57,30 @@ def units_to_pixels(units_num):
   units = match.group(2)
   if units:
     assert units in UNITS_TO_PX
-    num *= UNITS_TO_PX[units]
+    num *= UNITS_TO_PX[units][1]
   return num
+
+def units_are_physical(units_num):
+  match = re.search(r"(\d*.?\d+)\s*(\w*)", units_num)
+  if not match:
+    raise LabelmakerInputException("Caanot parse length '%s'" % units_num)
+  units = match.group(2)
+  if units:
+    assert units in UNITS_TO_PX
+    return UNITS_TO_PX[units][0]
+  else:
+    return False
+
+# takes a unit string accepted by labelmaker and returns one accepted by svg
+def clean_units(units_num):
+  match = re.search(r"(\d*.?\d+)\s*(\w*)", units_num)
+  if not match:
+    raise LabelmakerInputException("Caanot parse length '%s'" % units_num)
+  num = match.group(1)
+  units = match.group(2)
+  if not units:
+    units = ""
+  return "%s%s" % (num, units)
 
 class TemplateFilter:
   """Apply this filter on a elemement. Called once for each element in the
@@ -225,8 +247,8 @@ class BarcodeFilter(AreaFilter):
     if cmd.get_num_pos_args() == 0:
       return []
 
-    x = units_to_pixels(rect_elt.get('x'))
-    width = units_to_pixels(rect_elt.get('width'))
+    x = units_to_pixels(rect_elt.get('x')) * template.get_viewbox_correction()
+    width = units_to_pixels(rect_elt.get('width')) * template.get_viewbox_correction()
 
     y_str = rect_elt.get('y')
     height_str = rect_elt.get('height')
@@ -240,7 +262,7 @@ class BarcodeFilter(AreaFilter):
       quiet = False
     else:
       raise CommandSyntaxError("quiet='%s' not a bool" % quiet)
-    thickness = units_to_pixels(cmd.get_kw_arg('thickness', 'barcode thickness', 3))
+    thickness = units_to_pixels(cmd.get_kw_arg('thickness', 'barcode thickness', 3)) * template.get_viewbox_correction()
     val = cmd.get_pos_arg(0, 'barcode value')
     cmd.finalize()
 
@@ -324,15 +346,17 @@ class SvgFilter(AreaFilter):
     outputs = []
 
     attrs = elt_attrs_to_dict(rect_elt, ['x', 'y', 'height', 'width'])
-    rect_center_x = units_to_pixels(rect_elt.get('x')) + (units_to_pixels(rect_elt.get('width')) / 2)
-    rect_center_y = units_to_pixels(rect_elt.get('y')) + (units_to_pixels(rect_elt.get('height')) / 2)
+    rect_center_x = (units_to_pixels(rect_elt.get('x')) * template.get_viewbox_correction() +
+        (units_to_pixels(rect_elt.get('width')) / 2) * template.get_viewbox_correction())
+    rect_center_y = (units_to_pixels(rect_elt.get('y')) * template.get_viewbox_correction() +
+        (units_to_pixels(rect_elt.get('height')) / 2) * template.get_viewbox_correction())
 
     template_dir = template.get_template_directory()
 
     for i in range(cmd.get_num_pos_args()):
       sub_etree = ET.parse(os.path.join(template_dir, cmd.get_pos_arg(i, "SVG file to include"))).getroot()
-      sub_width = units_to_pixels(sub_etree.get('width'))
-      sub_height = units_to_pixels(sub_etree.get('height'))
+      sub_width = units_to_pixels(sub_etree.get('width')) * template.get_viewbox_correction()
+      sub_height = units_to_pixels(sub_etree.get('height')) * template.get_viewbox_correction()
       sub_viewbox = sub_etree.get('viewBox').split(' ')
       sub_viewbox = [float(elt) for elt in sub_viewbox]
       assert sub_viewbox[0] == 0, "TODO: support viewbox with origin != 0"
@@ -375,6 +399,29 @@ class SvgTemplate:
         self.template_elts.append(child_elt)
     for template_elt in self.template_elts:
       self.base_etree.getroot().remove(template_elt)
+
+    # Calculate physical units correction factor, for pixels to viewbox
+    template_width = self.base_etree.getroot().get('width')
+    template_height = self.base_etree.getroot().get('height')
+    template_viewbox = self.base_etree.getroot().get('viewBox').split()
+    template_viewbox = [float(x) for x in template_viewbox]
+
+    assert template_viewbox[0] == 0, "nonzero viewbox origin not supported"
+    assert template_viewbox[1] == 0, "nonzero viewbox origin not supported"
+
+    x_scale = template_viewbox[2] / units_to_pixels(template_width)
+    y_scale = template_viewbox[3] / units_to_pixels(template_height)
+
+    if (units_are_physical(template_width)):
+      assert (x_scale / y_scale) > 0.999 and (x_scale / y_scale) < 1.001, "cannot support different width/height viewbox scaling"
+      self.pix_correction = x_scale
+    else:
+      assert abs(x_scale - 1) < 0.001, "cannot support viewbox scaling with non-physical units"
+      assert abs(y_scale - 1) < 0.001, "cannot support viewbox scaling with non-physical units"
+      self.pix_correction = 1
+
+  def get_viewbox_correction(self):
+    return self.pix_correction
 
   """Returns the non-template portion of the input SVG etree."""
   def clone_base(self):

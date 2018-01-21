@@ -5,7 +5,8 @@ import configparser
 import xml.etree.ElementTree as ET
 import re
 
-from SvgTemplate import SvgTemplate, TextFilter, ShowFilter, BarcodeFilter, StyleFilter, SvgFilter, units_to_pixels, strip_tag
+from SvgTemplate import SvgTemplate, TextFilter, ShowFilter, BarcodeFilter, StyleFilter, SvgFilter
+from SvgTemplate import clean_units, units_to_pixels, strip_tag
 
 class LabelmakerInputException(Exception):
   pass
@@ -77,8 +78,10 @@ if __name__ == '__main__':
   incx = units_to_pixels(config_get(config, 'sheet', 'incx', "horizontal spacing"))
   incy = units_to_pixels(config_get(config, 'sheet', 'incy', "vertical spacing"))
 
-  sheet_sizex = units_to_pixels(config_get(config, 'sheet', 'sizex', "sheet width"))
-  sheet_sizey = units_to_pixels(config_get(config, 'sheet', 'sizey', "sheet height"))
+  sheet_sizex = config_get(config, 'sheet', 'sizex', "sheet width")
+  sheet_sizey = config_get(config, 'sheet', 'sizey', "sheet height")
+  sheet_pixx = units_to_pixels(sheet_sizex)
+  sheet_pixy = units_to_pixels(sheet_sizey)
 
   if args.dir == 'row':
     min_spacing = incx
@@ -117,9 +120,10 @@ if __name__ == '__main__':
       assert strip_tag(svg_elt.tag) == 'svg'
 
       # TODO: support inputs which don't start at (0, 0)
-      svg_elt.set('width', str(sheet_sizex))
-      svg_elt.set('height', str(sheet_sizey))
-      svg_elt.set('viewBox', '0 0 %s %s' % (sheet_sizex, sheet_sizey))
+      svg_elt.set('width', clean_units(sheet_sizex))
+      svg_elt.set('height', clean_units(sheet_sizey))
+      svg_elt.set('viewBox', '0 0 %s %s' %
+                  (sheet_pixx * template.get_viewbox_correction(), sheet_pixy * template.get_viewbox_correction()))
 
     if args.dir == 'row':
       pos_x = offx + curr_min * incx
