@@ -247,8 +247,8 @@ class BarcodeFilter(AreaFilter):
     if cmd.get_num_pos_args() == 0:
       return []
 
-    x = units_to_pixels(rect_elt.get('x')) * template.get_viewbox_correction()
-    width = units_to_pixels(rect_elt.get('width')) * template.get_viewbox_correction()
+    x = units_to_pixels(rect_elt.get('x'))
+    width = units_to_pixels(rect_elt.get('width'))
 
     y_str = rect_elt.get('y')
     height_str = rect_elt.get('height')
@@ -266,12 +266,17 @@ class BarcodeFilter(AreaFilter):
     val = cmd.get_pos_arg(0, 'barcode value')
     cmd.finalize()
 
-    barcode_widths = Code128.code128_widths(val)
-    barcode_widths = [x * thickness for x in barcode_widths]
-    barcode_width = sum(barcode_widths)
+    bar_widths = Code128.code128_widths(val)
 
     if quiet:
-      barcode_width += 20 * thickness
+      draw_bar = False
+      bar_widths = [10] + bar_widths + [10]
+    else:
+      draw_bar = True
+
+    bar_widths = [bar_width * thickness for bar_width in bar_widths]
+    barcode_width = sum(bar_widths)
+
     if barcode_width > width:
       raise SvgTemplateException("Barcode '%s' with width %s exceeds allocated width %s" % (val, barcode_width, width))
 
@@ -282,14 +287,10 @@ class BarcodeFilter(AreaFilter):
     elif alignment == 'xMax':
       curr_x = x + width - barcode_width
 
-    if quiet:
-      curr_x += 10 * thickness
-
-    assert len(barcode_widths) % 2 == 1
+    assert len(bar_widths) % 2 == 1
 
     output_elts = []
-    draw_bar = True
-    for bar_width in barcode_widths:
+    for bar_width in bar_widths:
       if draw_bar:
         output_elts.append(ET.Element('rect', {
           'x': str(curr_x),
