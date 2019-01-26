@@ -105,12 +105,16 @@ if __name__ == '__main__':
   print("Ready")
 
   while True:
-    mod_time = os.path.getmtime(args.data)
+    if os.path.isfile(args.data):
+      mod_time = os.path.getmtime(args.data)
 
-    if mod_time != last_mod_time:
-      print("File modification detected")
-      seen_set = traverse(args.data, print_fn(seen_set))
-      print("Done")
+      if mod_time != last_mod_time:
+        print("File modification detected")
+        seen_set = traverse(args.data, print_fn(seen_set))
+        print("Done")
 
-    last_mod_time = mod_time
+      last_mod_time = mod_time
+    else:
+      print("Warning: file not found")
+      
     time.sleep(0.25)
