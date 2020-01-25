@@ -22,10 +22,12 @@ if __name__ == '__main__':
                       help="CSV data")
   parser.add_argument('output', type=str,
                       help="SVG generated temporary prefix")
-  parser.add_argument('printer', type=str,
-                      help="printer name")
+  parser.add_argument('--printer', type=str,
+                      help="printer name, leave blank to only generate PDFs", default=None)
   parser.add_argument('--only', type=str, default=None,
                       help="only process rows which have this key nonempty")
+  parser.add_argument('--data_fresh', action='store_true',
+                      help="ignore the initial state of data (print all rows)")
   args = parser.parse_args()
 
   ET.register_namespace('', "http://www.w3.org/2000/svg")
@@ -94,21 +96,27 @@ if __name__ == '__main__':
         '--export-pdf=' + output_name + '.pdf'
       ]).communicate()
 
-      win32api.ShellExecute(0,
-        "print", output_name + '.pdf',
-        '/d:"%s"' % args.printer, ".", 0)
+      if args.printer is not None:
+        win32api.ShellExecute(0,
+          "print", output_name + '.pdf',
+          '/d:"%s"' % args.printer, ".", 0)
     return actual_fn
 
   # Read in the current rows and ignore those
-  last_mod_time = os.path.getmtime(args.data)
-  seen_set = traverse(args.data, lambda x: x)
-  print("Ready")
+  
+  if args.data_fresh:
+    last_mod_time = None
+    seen_set = set()
+  else:
+    last_mod_time = os.path.getmtime(args.data)
+    seen_set = traverse(args.data, lambda x: x)
+  print(f"Ready, ignored initial {len(seen_set)} rows")
 
   while True:
     if os.path.isfile(args.data):
       mod_time = os.path.getmtime(args.data)
 
-      if mod_time != last_mod_time:
+      if last_mod_time is None or mod_time != last_mod_time:
         print("File modification detected")
         seen_set = traverse(args.data, print_fn(seen_set))
         print("Done")
