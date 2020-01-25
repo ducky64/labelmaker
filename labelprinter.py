@@ -24,6 +24,8 @@ if __name__ == '__main__':
                       help="SVG generated temporary prefix")
   parser.add_argument('--printer', type=str,
                       help="printer name, leave blank to only generate PDFs", default=None)
+  parser.add_argument('--copies', type=int, default=1,
+                      help="number of copies to print for each label")
   parser.add_argument('--only', type=str, default=None,
                       help="only process rows which have this key nonempty")
   parser.add_argument('--data_fresh', action='store_true',
@@ -97,9 +99,10 @@ if __name__ == '__main__':
       ]).communicate()
 
       if args.printer is not None:
-        win32api.ShellExecute(0,
-          "print", output_name + '.pdf',
-          '/d:"%s"' % args.printer, ".", 0)
+        for i in range(args.copies):
+          win32api.ShellExecute(0,
+            "print", output_name + '.pdf',
+            '/d:"%s"' % args.printer, ".", 0)
     return actual_fn
 
   # Read in the current rows and ignore those
