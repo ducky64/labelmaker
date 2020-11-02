@@ -94,8 +94,8 @@ if __name__ == '__main__':
       output.write(output_name + ".svg")
 
       subprocess.Popen([
-        'inkscape', '--without-gui', output_name + '.svg' ,
-        '--export-pdf=' + output_name + '.pdf'
+        'inkscape', output_name + '.svg' ,
+        '--export-filename=' + output_name + '.pdf'
       ]).communicate()
 
       if args.printer is not None:
