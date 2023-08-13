@@ -1,6 +1,10 @@
 # labelmaker
 Label sheet generator using SVG templates and CSV data.
 
+## Superseded by [pysvglabel](https://github.com/ducky64/pysvglabel)
+pysvglabel makes more consistent use of Python syntax and interprets templates as Python code to allow more powerful data transformation and SVG manipulation.
+This repository is no longer developed, but if your needs are basic SVG text substitution and barcoding, this will probably still get the job done.
+
 ## Example
 
 | Template | CSV | Output |
