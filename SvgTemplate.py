@@ -262,7 +262,7 @@ class BarcodeFilter(AreaFilter):
       quiet = False
     else:
       raise CommandSyntaxError("quiet='%s' not a bool" % quiet)
-    thickness = units_to_pixels(cmd.get_kw_arg('thickness', 'barcode thickness', 3)) * template.get_viewbox_correction()
+    thickness = units_to_pixels(cmd.get_kw_arg('thickness', 'barcode thickness', '3')) * template.get_viewbox_correction()
     val = cmd.get_pos_arg(0, 'barcode value')
     cmd.finalize()
 
